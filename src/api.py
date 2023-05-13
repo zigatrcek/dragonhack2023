@@ -1,6 +1,9 @@
 import requests
 from secret import API_URL
 
+if not API_URL:
+    API_URL = input("Enter API URL: ")
+
 class API:
     """Class that enables communication with an Azure Function API.
     """
@@ -18,6 +21,7 @@ class API:
 
     def post_count(self, count):
         prev_count = self.get_count()
+
         count['paper'] += prev_count['paper']
         count['container'] += prev_count['container']
         count['other'] += prev_count['other']

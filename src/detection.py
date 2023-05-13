@@ -273,10 +273,3 @@ class Detection:
 
                 if cv2.waitKey(1) == ord("q"):
                     break
-
-
-if __name__ == "__main__":
-    args = Detection.parse_args()
-    det = Detection(
-        args, serial_communication=SerialCommunication(port='COM9'))
-    det.run()
