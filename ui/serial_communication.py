@@ -25,7 +25,15 @@ class SerialCommunication:
         """
         assert 0 <= mode <= 3, 'Invalid mode!'
         self.ser.write(bytes([mode]))
+        print(self.ser.readline())
 
     def close(self):
         """Closes the serial port."""
         self.ser.close()
+
+if __name__ == '__main__':
+    """Used for testing purposes.
+    """
+    sc = SerialCommunication(port='COM8')
+    sc.set_mode(1)
+    sc.close()
