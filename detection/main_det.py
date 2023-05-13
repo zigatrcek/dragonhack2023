@@ -14,11 +14,10 @@ def parse_args() -> argparse.Namespace:
     # parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--model", help="Provide model name or model path for inference",
-                        default='yolov4_tiny_coco_416x416', type=str)
+                        default='../models/yoto/yoto.blob', type=str)
     parser.add_argument("-c", "--config", help="Provide config path for inference",
-                        default='json/yolov4-tiny.json', type=str)
+                        default='../models/yoto/yoto.json', type=str)
     args = parser.parse_args()
-
     return args
 
 
@@ -63,7 +62,7 @@ def get_config(args: argparse.Namespace) -> dict:
 def create_pipeline(config: dict) -> dai.Pipeline:
     """
     Create pipeline, with cam input, detection network output and rgb output
-    
+
     :param config: dict with configuration
     """
     # Create pipeline
@@ -90,7 +89,8 @@ def create_pipeline(config: dict) -> dai.Pipeline:
     metadata = config.get("metadata", {})
 
     # Network specific settings
-    detectionNetwork.setConfidenceThreshold(metadata.get("confidence_threshold", {}))
+    detectionNetwork.setConfidenceThreshold(
+        metadata.get("confidence_threshold", {}))
     detectionNetwork.setNumClasses(metadata.get("classes", {}))
     detectionNetwork.setCoordinateSize(metadata.get("coordinates", {}))
     detectionNetwork.setAnchors(metadata.get("anchors", {}))
@@ -130,9 +130,12 @@ def displayFrame(name: str, frame: np.array, detections: list, labels: dict) -> 
     """
     color = (255, 0, 0)
     for detection in detections:
-        bbox = frameNorm(frame, (detection.xmin, detection.ymin, detection.xmax, detection.ymax))
-        cv2.putText(frame, labels[detection.label], (bbox[0] + 10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-        cv2.putText(frame, f"{int(detection.confidence * 100)}%", (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+        bbox = frameNorm(frame, (detection.xmin, detection.ymin,
+                         detection.xmax, detection.ymax))
+        cv2.putText(frame, labels[detection.label], (bbox[0] +
+                    10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+        cv2.putText(frame, f"{int(detection.confidence * 100)}%",
+                    (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
         cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
     # Show the frame
     cv2.imshow(name, frame)
@@ -170,7 +173,8 @@ def main() -> None:
                 fps_counter += 1
 
             if frame is not None:
-                displayFrame("rgb", frame, detections, config.get("labels", {}))
+                displayFrame("rgb", frame, detections,
+                             config.get("labels", {}))
 
             if cv2.waitKey(1) == ord('q'):
                 break
