@@ -11,7 +11,7 @@ from serial_communication import SerialCommunication
 
 
 class Detection:
-    def __init__(self, args, device=None, serial_communication=None):
+    def __init__(self, args: argparse.Namespace, device: dai.Device = None, serial_communication: SerialCommunication = None):
         # classification variables
         self.args = args
         self.config = Detection.get_config(self.args)
@@ -154,9 +154,11 @@ class Detection:
     def displayFrame(cls, name: str, frame: np.array, detections: list, labels: dict) -> None:
         """
         Draw frame with possible bounding boxes
-        name: window name
-        frame: cv2 frame from video
-        detections: list of detected objects
+
+        Args:
+            name: window name
+            frame: cv2 frame from video
+            detections: list of detected objects
         """
         colors = {
             "Containers": (0, 255, 255),  # yellow
@@ -167,13 +169,15 @@ class Detection:
             frame_color = colors.get(labels[detection.label], colors["Other"])
             bbox = Detection.frameNorm(frame, (detection.xmin, detection.ymin,
                                                detection.xmax, detection.ymax))
+            # label name
             cv2.putText(frame, labels[detection.label], (bbox[0] +
                         10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, frame_color)
+            # confidence
             cv2.putText(frame, f"{int(detection.confidence * 100)}%",
                         (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, frame_color)
+            # bounding box
             cv2.rectangle(frame, (bbox[0], bbox[1]),
                           (bbox[2], bbox[3]), frame_color, 2)
-        # Show the frame
         cv2.imshow(name, frame)
 
     def send_to_serial(self, detection) -> None:
@@ -189,32 +193,33 @@ class Detection:
         if not detection:
             mode_to_set = 0
         else:
-            mode_to_set = modes.get(self.config.get(
-                "labels", {})[detection.label], 0)
+            labels = self.config.get("labels", {})
+            mode_to_set = modes.get(labels[detection.label])
         print(f"Setting mode to {mode_to_set}")
         self.serial_communication.set_mode(mode_to_set)
 
-    def update_recent_detections(self, detection=None) -> None:
+    def update_recent_detections(self, detections: list = None) -> None:
         """
-        Update recent detections list
+        Update recent detection data
         """
         labels = self.config.get("labels", {})
+
         now = time.monotonic()
         allowed_time = now - self.max_frame_age
-        if detection:
+
+        for detection in detections:
             self.recent_frames.append(detection)
             self.recent_timestamps.append(now)
             self.classification_counts[labels[detection.label]] += 1
+
         while self.recent_timestamps and self.recent_timestamps[0] < allowed_time:
             self.recent_timestamps.popleft()
             removed_frame = self.recent_frames.popleft()
             self.classification_counts[labels[removed_frame.label]] -= 1
 
     def run(self) -> None:
-
         # Connect to device and start pipeline
         with self.device as device:
-
             # Output queues will be used to get the rgb frames and nn data from the outputs defined above
             qRgb = device.getOutputQueue(name="rgb", maxSize=4, blocking=False)
             qDet = device.getOutputQueue(name="nn", maxSize=4, blocking=False)
@@ -236,8 +241,8 @@ class Detection:
                                 (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color2)
                 if inDet is not None:
                     detections = inDet.detections
+                    self.update_recent_detections(detections)
                     for detection in detections:
-                        self.update_recent_detections(detection)
                         count = self.classification_counts[labels[detection.label]]
                         max_count = max(self.classification_counts.values())
                         if count < self.min_classification_count or count < max_count:
@@ -246,8 +251,6 @@ class Detection:
                             self.last_classification = labels[detection.label]
                             self.send_to_serial(detection)
                     max_count = max(self.classification_counts.values())
-                    if not detections:
-                        self.update_recent_detections()
                     if self.last_classification and max_count < self.min_classification_count:
                         self.last_classification = None
                         self.send_to_serial(None)
