@@ -6,6 +6,6 @@
     "start": "func start",
     "test": "echo \"No tests yet...\""
   },
-  "dependencies": {},
+  "dependencies": {"mongoose": "^7.0.3"},
   "devDependencies": {}
 }
