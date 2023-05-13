@@ -2,9 +2,10 @@ void setup() {
   Serial.begin(115200);
 }
 void loop() {
- 
   while(Serial.available()){
-    Serial.write(Serial.read());
+    int read = Serial.read();
+    Serial.println(read);
+    Serial.write(read);
   }
   delay(10);
 }
