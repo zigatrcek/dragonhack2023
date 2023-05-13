@@ -12,31 +12,26 @@ void setup() {
 }
 
 void loop() {
-  while(Serial.available()){
+  while (Serial.available()) {
     int input = Serial.read();
 
-  if (input == '0' || input = 0) {
-    turnOff();
-  }
-  else if (input == '1' || input == 1) {
-    turnOff();
-    yellow();
-  }
-  else if (input == '2' || input == 2) {
-    turnOff();
-    blue();
-  }
-  else if (input == '3' || input == 3) {
-    turnOff();
-    white();
-  }
-  else if (input == '\n') {
+    if (input == '0' || input = 0) {
+      turnOff();
+    } else if (input == '1' || input == 1) {
+      turnOff();
+      yellow();
+    } else if (input == '2' || input == 2) {
+      turnOff();
+      blue();
+    } else if (input == '3' || input == 3) {
+      turnOff();
+      white();
+    } else if (input == '\n') {
 
-  }
-  else {
-    Serial.println("jebote");
-  }
-  strip.show();
+    } else {
+      Serial.println("jebote");
+    }
+    strip.show();
   }
   delay(10);
 }
