@@ -166,11 +166,13 @@ class Detection:
             "Other": (0, 0, 255),  # red
         }
         for detection in detections:
-            frame_color = colors.get(labels[detection.label], colors["Other"])
+            label = labels[detection.label]
+            frame_color = colors.get(label, colors["Other"])
             bbox = Detection.frameNorm(frame, (detection.xmin, detection.ymin,
                                                detection.xmax, detection.ymax))
+
             # label name
-            cv2.putText(frame, labels[detection.label], (bbox[0] +
+            cv2.putText(frame, label, (bbox[0] +
                         10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, frame_color)
             # confidence
             cv2.putText(frame, f"{int(detection.confidence * 100)}%",
@@ -190,11 +192,14 @@ class Detection:
             "Paper": 2,
             "Other": 3,
         }
+
         if not detection:
             mode_to_set = 0
+
         else:
             labels = self.config.get("labels", {})
             mode_to_set = modes.get(labels[detection.label])
+
         print(f"Setting mode to {mode_to_set}")
         self.serial_communication.set_mode(mode_to_set)
 
