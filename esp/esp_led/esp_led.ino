@@ -12,9 +12,7 @@ void setup() {
 }
 
 void loop() {
- 
   while(Serial.available()){
-
     int input = Serial.read();
 
   if (input == '0' || input = 0) {
