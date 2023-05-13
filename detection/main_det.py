@@ -129,9 +129,9 @@ def displayFrame(name: str, frame: np.array, detections: list, labels: dict) -> 
     detections: list of detected objects
     """
     colors = {
-        "Containers": (0, 255, 255),
-        "Paper": (255, 0, 0),
-        "Other": (0, 0, 255)
+        "Containers": (0, 255, 255), # yellow
+        "Paper": (255, 0, 0), # blue
+        "Other": (0, 0, 255), # red
     }
     for detection in detections:
         frame_color = colors.get(labels[detection.label], colors["Other"])
