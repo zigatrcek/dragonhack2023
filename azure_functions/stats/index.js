@@ -6,4 +6,7 @@ module.exports = async function (context, req) {
     if (req.method == "GET") {
         await statsService.getStats(context)
     }
+    if (req.method == "POST") {
+        await statsService.addStats(context, req.body)
+    }
 }

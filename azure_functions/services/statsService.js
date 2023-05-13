@@ -21,6 +21,24 @@ const getStats = async (context) => {
     });
 }
 
+const addStats = async (context, stats) => {
+    db.connectToDatabase();
+
+    const newStats = new Stats(stats);
+    await newStats.save().then((stats) => {
+        context.res = {
+            status: 201,
+            body: stats
+        };
+    }).catch((err) => {
+        context.res = {
+            status: 400,
+            body: "Error adding stats." + err
+        };
+    });
+}
+
 module.exports = {
-    getStats
+    getStats,
+    addStats
 }
