@@ -3,20 +3,25 @@ import json
 import time
 from collections import deque
 from pathlib import Path
-from serial_communication import SerialCommunication
 
 import cv2
 import depthai as dai
 import numpy as np
+from serial_communication import SerialCommunication
 
 
 class Detection:
     def __init__(self, args, device=None, serial_communication=None):
+        # classification variables
         self.args = args
         self.config = Detection.get_config(self.args)
         self.pipeline = Detection.create_pipeline(self.config)
+
+        # devices
         self.device = device or dai.Device(self.pipeline)
         self.serial_communication = serial_communication or SerialCommunication()
+
+        # live computation
         self.recent_frames = deque()
         self.recent_timestamps = deque()
         self.classification_counts = {
@@ -24,10 +29,11 @@ class Detection:
             "Paper": 0,
             "Other": 0,
         }
-        self.max_frame_age = 1.0
-        self.min_classification_count = 10
         self.last_classification = None
 
+        # settings
+        self.max_frame_age = 1.0
+        self.min_classification_count = 10
 
     @classmethod
     def parse_args(cls) -> argparse.Namespace:
@@ -147,7 +153,7 @@ class Detection:
     @classmethod
     def displayFrame(cls, name: str, frame: np.array, detections: list, labels: dict) -> None:
         """
-        Utility function to draw bounding boxes on frame
+        Draw frame with possible bounding boxes
         name: window name
         frame: cv2 frame from video
         detections: list of detected objects
@@ -174,6 +180,7 @@ class Detection:
         """
         Send detection to serial port
         """
+        # map labels to modes
         modes = {
             "Containers": 1,
             "Paper": 2,
@@ -182,11 +189,10 @@ class Detection:
         if not detection:
             mode_to_set = 0
         else:
-            mode_to_set = modes.get(self.config.get("labels", {})[detection.label], 0)
+            mode_to_set = modes.get(self.config.get(
+                "labels", {})[detection.label], 0)
         print(f"Setting mode to {mode_to_set}")
         self.serial_communication.set_mode(mode_to_set)
-
-
 
     def update_recent_detections(self, detection=None) -> None:
         """
@@ -203,7 +209,6 @@ class Detection:
             self.recent_timestamps.popleft()
             removed_frame = self.recent_frames.popleft()
             self.classification_counts[labels[removed_frame.label]] -= 1
-
 
     def run(self) -> None:
 
@@ -241,7 +246,6 @@ class Detection:
                             self.last_classification = labels[detection.label]
                             self.send_to_serial(detection)
                     max_count = max(self.classification_counts.values())
-                    # print(self.classification_counts)
                     if not detections:
                         self.update_recent_detections()
                     if self.last_classification and max_count < self.min_classification_count:
@@ -259,5 +263,6 @@ class Detection:
 
 if __name__ == "__main__":
     args = Detection.parse_args()
-    det = Detection(args, serial_communication=SerialCommunication(port='COM9'))
+    det = Detection(
+        args, serial_communication=SerialCommunication(port='COM9'))
     det.run()
