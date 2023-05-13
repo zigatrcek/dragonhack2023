@@ -11,24 +11,8 @@ import time
 import argparse
 import json
 
-# parse arguments
-parser = argparse.ArgumentParser()
-parser.add_argument("-c", "--config", help="Provide config path for inference",
-                    default='json/yolov4-tiny.json', type=str)
-args = parser.parse_args()
 
-# parse config
-configPath = Path(args.config)
-if not configPath.exists():
-    raise ValueError("Path {} does not exist!".format(configPath))
-
-with configPath.open() as f:
-    config = json.load(f)
-nnConfig = config.get("nn_config", {})
-
-# parse input shape
-if "input_size" in nnConfig:
-    W, H = tuple(map(int, nnConfig.get("input_size").split('x')))
+W, H = 640, 640
 
 # Create pipeline
 pipeline = dai.Pipeline()
