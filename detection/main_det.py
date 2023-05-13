@@ -242,15 +242,21 @@ class Detection:
                 if inDet is not None:
                     detections = inDet.detections
                     self.update_recent_detections(detections)
+                    max_count = max(self.classification_counts.values())
+
                     for detection in detections:
-                        count = self.classification_counts[labels[detection.label]]
-                        max_count = max(self.classification_counts.values())
+                        label = labels[detection.label]
+                        count = self.classification_counts[label]
+
+                        # do not display uncertain detections
                         if count < self.min_classification_count or count < max_count:
                             detections.remove(detection)
-                        elif labels[detection.label] != self.last_classification:
-                            self.last_classification = labels[detection.label]
+
+                        # if detected class changes, send to serial
+                        elif label != self.last_classification:
+                            self.last_classification = label
                             self.send_to_serial(detection)
-                    max_count = max(self.classification_counts.values())
+
                     if self.last_classification and max_count < self.min_classification_count:
                         self.last_classification = None
                         self.send_to_serial(None)
