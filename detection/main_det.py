@@ -138,9 +138,9 @@ def displayFrame(name: str, frame: np.array, detections: list, labels: dict) -> 
         bbox = frameNorm(frame, (detection.xmin, detection.ymin,
                          detection.xmax, detection.ymax))
         cv2.putText(frame, labels[detection.label], (bbox[0] +
-                    10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                    10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, frame_color)
         cv2.putText(frame, f"{int(detection.confidence * 100)}%",
-                    (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
+                    (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, frame_color)
         cv2.rectangle(frame, (bbox[0], bbox[1]),
                       (bbox[2], bbox[3]), frame_color, 2)
     # Show the frame
