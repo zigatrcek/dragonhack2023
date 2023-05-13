@@ -14,9 +14,9 @@ def parse_args() -> argparse.Namespace:
     # parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument("-m", "--model", help="Provide model name or model path for inference",
-                        default='../models/yoto/yoto.blob', type=str)
+                        default="../models/yoto/yoto.blob", type=str)
     parser.add_argument("-c", "--config", help="Provide config path for inference",
-                        default='../models/yoto/yoto.json', type=str)
+                        default="../models/yoto/yoto.json", type=str)
     args = parser.parse_args()
     return args
 
@@ -43,7 +43,7 @@ def get_config(args: argparse.Namespace) -> dict:
 
     # parse input shape
     if "input_size" in nnConfig:
-        W, H = tuple(map(int, nnConfig.get("input_size").split('x')))
+        W, H = tuple(map(int, nnConfig.get("input_size").split("x")))
 
     nnPath = args.model
     if not Path(nnPath).exists():
@@ -129,12 +129,12 @@ def displayFrame(name: str, frame: np.array, detections: list, labels: dict) -> 
     detections: list of detected objects
     """
     colors = {
-        'containers': (255, 255, 0),
-        'paper': (0, 0, 255),
-        'other': (255, 0, 0)
+        "Containers": (0, 255, 255),
+        "Paper": (255, 0, 0),
+        "Other": (0, 0, 255)
     }
     for detection in detections:
-        frame_color = colors.get(labels[detection.label], colors['other'])
+        frame_color = colors.get(labels[detection.label], colors["Other"])
         bbox = frameNorm(frame, (detection.xmin, detection.ymin,
                          detection.xmax, detection.ymax))
         cv2.putText(frame, labels[detection.label], (bbox[0] +
@@ -182,7 +182,7 @@ def main() -> None:
                 displayFrame("rgb", frame, detections,
                              config.get("labels", {}))
 
-            if cv2.waitKey(1) == ord('q'):
+            if cv2.waitKey(1) == ord("q"):
                 break
 
 
