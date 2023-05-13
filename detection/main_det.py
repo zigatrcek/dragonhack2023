@@ -128,15 +128,21 @@ def displayFrame(name: str, frame: np.array, detections: list, labels: dict) -> 
     frame: cv2 frame from video
     detections: list of detected objects
     """
-    color = (255, 0, 0)
+    colors = {
+        'containers': (255, 255, 0),
+        'paper': (0, 0, 255),
+        'other': (255, 0, 0)
+    }
     for detection in detections:
+        frame_color = colors.get(labels[detection.label], colors['other'])
         bbox = frameNorm(frame, (detection.xmin, detection.ymin,
                          detection.xmax, detection.ymax))
         cv2.putText(frame, labels[detection.label], (bbox[0] +
                     10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
         cv2.putText(frame, f"{int(detection.confidence * 100)}%",
                     (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, 255)
-        cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), color, 2)
+        cv2.rectangle(frame, (bbox[0], bbox[1]),
+                      (bbox[2], bbox[3]), frame_color, 2)
     # Show the frame
     cv2.imshow(name, frame)
 
