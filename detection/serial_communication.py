@@ -25,7 +25,6 @@ class SerialCommunication:
         """
         assert 0 <= mode <= 3, 'Invalid mode!'
         self.ser.write(bytes([mode]))
-        print(self.ser.readline())
 
     def close(self):
         """Closes the serial port."""

@@ -1,20 +1,32 @@
+import argparse
+import json
+import time
+from collections import deque
 from pathlib import Path
+from serial_communication import SerialCommunication
+
 import cv2
 import depthai as dai
 import numpy as np
-import time
-import argparse
-import json
-
-
 
 
 class Detection:
-    def __init__(self, args, device=None):
+    def __init__(self, args, device=None, serial_communication=None):
         self.args = args
         self.config = Detection.get_config(self.args)
         self.pipeline = Detection.create_pipeline(self.config)
         self.device = device or dai.Device(self.pipeline)
+        self.serial_communication = serial_communication or SerialCommunication()
+        self.recent_frames = deque()
+        self.recent_timestamps = deque()
+        self.classification_counts = {
+            "Containers": 0,
+            "Paper": 0,
+            "Other": 0,
+        }
+        self.max_frame_age = 1.0
+        self.min_classification_count = 10
+        self.last_classification = None
 
 
     @classmethod
@@ -69,7 +81,6 @@ class Detection:
 
         return config
 
-
     @classmethod
     def create_pipeline(cls, config: dict) -> dai.Pipeline:
         """
@@ -93,7 +104,8 @@ class Detection:
         W, H = config.get("input_size", (640, 640))
         camRgb.setPreviewSize(W, H)
 
-        camRgb.setResolution(dai.ColorCameraProperties.SensorResolution.THE_1080_P)
+        camRgb.setResolution(
+            dai.ColorCameraProperties.SensorResolution.THE_1080_P)
         camRgb.setInterleaved(False)
         camRgb.setColorOrder(dai.ColorCameraProperties.ColorOrder.BGR)
         camRgb.setFps(40)
@@ -141,22 +153,56 @@ class Detection:
         detections: list of detected objects
         """
         colors = {
-            "Containers": (0, 255, 255), # yellow
-            "Paper": (255, 0, 0), # blue
-            "Other": (0, 0, 255), # red
+            "Containers": (0, 255, 255),  # yellow
+            "Paper": (255, 0, 0),  # blue
+            "Other": (0, 0, 255),  # red
         }
         for detection in detections:
             frame_color = colors.get(labels[detection.label], colors["Other"])
             bbox = Detection.frameNorm(frame, (detection.xmin, detection.ymin,
-                            detection.xmax, detection.ymax))
+                                               detection.xmax, detection.ymax))
             cv2.putText(frame, labels[detection.label], (bbox[0] +
                         10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, frame_color)
             cv2.putText(frame, f"{int(detection.confidence * 100)}%",
                         (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, frame_color)
             cv2.rectangle(frame, (bbox[0], bbox[1]),
-                        (bbox[2], bbox[3]), frame_color, 2)
+                          (bbox[2], bbox[3]), frame_color, 2)
         # Show the frame
         cv2.imshow(name, frame)
+
+    def send_to_serial(self, detection) -> None:
+        """
+        Send detection to serial port
+        """
+        modes = {
+            "Containers": 1,
+            "Paper": 2,
+            "Other": 3,
+        }
+        if not detection:
+            mode_to_set = 0
+        else:
+            mode_to_set = modes.get(self.config.get("labels", {})[detection.label], 0)
+        print(f"Setting mode to {mode_to_set}")
+        self.serial_communication.set_mode(mode_to_set)
+
+
+
+    def update_recent_detections(self, detection=None) -> None:
+        """
+        Update recent detections list
+        """
+        labels = self.config.get("labels", {})
+        now = time.monotonic()
+        allowed_time = now - self.max_frame_age
+        if detection:
+            self.recent_frames.append(detection)
+            self.recent_timestamps.append(now)
+            self.classification_counts[labels[detection.label]] += 1
+        while self.recent_timestamps and self.recent_timestamps[0] < allowed_time:
+            self.recent_timestamps.popleft()
+            removed_frame = self.recent_frames.popleft()
+            self.classification_counts[labels[removed_frame.label]] -= 1
 
 
     def run(self) -> None:
@@ -173,6 +219,7 @@ class Detection:
             startTime = time.monotonic()
             fps_counter = 0
             color2 = (255, 255, 255)
+            labels = self.config.get("labels", {})
 
             while True:
                 inRgb = qRgb.get()
@@ -182,14 +229,29 @@ class Detection:
                     frame = inRgb.getCvFrame()
                     cv2.putText(frame, "NN fps: {:.2f}".format(fps_counter / (time.monotonic() - startTime)),
                                 (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color2)
-
                 if inDet is not None:
                     detections = inDet.detections
+                    for detection in detections:
+                        self.update_recent_detections(detection)
+                        count = self.classification_counts[labels[detection.label]]
+                        max_count = max(self.classification_counts.values())
+                        if count < self.min_classification_count or count < max_count:
+                            detections.remove(detection)
+                        elif labels[detection.label] != self.last_classification:
+                            self.last_classification = labels[detection.label]
+                            self.send_to_serial(detection)
+                    max_count = max(self.classification_counts.values())
+                    # print(self.classification_counts)
+                    if not detections:
+                        self.update_recent_detections()
+                    if self.last_classification and max_count < self.min_classification_count:
+                        self.last_classification = None
+                        self.send_to_serial(None)
                     fps_counter += 1
 
                 if frame is not None:
                     Detection.displayFrame("rgb", frame, detections,
-                                self.config.get("labels", {}))
+                                           labels)
 
                 if cv2.waitKey(1) == ord("q"):
                     break
@@ -197,5 +259,5 @@ class Detection:
 
 if __name__ == "__main__":
     args = Detection.parse_args()
-    det = Detection(args)
+    det = Detection(args, serial_communication=SerialCommunication(port='COM9'))
     det.run()
