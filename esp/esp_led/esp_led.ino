@@ -29,7 +29,7 @@ void loop() {
     } else if (input == '\n') {
 
     } else {
-      Serial.println("jebote");
+      Serial.println("Invalid program input");
     }
     strip.show();
   }
