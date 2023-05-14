@@ -39,6 +39,8 @@ class Detection:
         self.upper_count_threshold = 10
         self.lower_count_threshold = 5
         self.api_update_interval = 3600  # 1 hour
+        self.upper_size_threshold = .15
+        self.lower_size_threshold = .1
 
         # stats
         self.total_classification_counts = self.api.get_count()
@@ -146,7 +148,7 @@ class Detection:
         return pipeline
 
     @classmethod
-    def frameNorm(cls, frame: np.array, bbox: np.array) -> np.array:
+    def frame_norm(cls, frame: np.array, bbox: np.array) -> np.array:
         """
         Utility function to calculate bounding box in pixels
 
@@ -176,7 +178,7 @@ class Detection:
         for detection in detections:
             label = labels[detection.label]
             frame_color = colors.get(label, colors["Other"])
-            bbox = Detection.frameNorm(frame, (detection.xmin, detection.ymin,
+            bbox = Detection.frame_norm(frame, (detection.xmin, detection.ymin,
                                                detection.xmax, detection.ymax))
 
             # label name
@@ -285,9 +287,17 @@ class Detection:
 
                         # use two thresholds, idea from hysteresis thresholding
                         count_threshold = self.upper_count_threshold
+                        size_threshold = self.upper_size_threshold
 
                         if label == self.last_classification:
                             count_threshold = self.lower_count_threshold
+                            size_threshold = self.lower_size_threshold
+
+                        width = detection.xmax - detection.xmin
+                        height = detection.ymax - detection.ymin
+                        if width < size_threshold or height < size_threshold:
+                            detections.remove(detection)
+                            continue
 
                         # do not display uncertain detections
                         if count < count_threshold or count < max_count:

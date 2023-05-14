@@ -14,7 +14,7 @@ import json
 # parse arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("-c", "--config", help="Provide config path for inference",
-                    default='json/yolov4-tiny.json', type=str)
+                    default='../models/yoto/yoto.json', type=str)
 args = parser.parse_args()
 
 # parse config
@@ -85,7 +85,7 @@ with dai.Device(pipeline) as device:
 
             if capture and (counter % 10 == 0):
                 print(f'Capturing image...{cap_i}')
-                save_img(frame, 'C:/Users/blazr/Documents/code/dragonhack/images/paper/box', cap_i)
+                save_img(frame, 'C:/Users/zigat/Documents/footage/container/img', cap_i)
                 cap_i += 1
 
         key = cv2.waitKey(1)
