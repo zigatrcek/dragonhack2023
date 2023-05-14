@@ -38,14 +38,12 @@ class Detection:
         self.max_frame_age = 1.0
         self.upper_count_threshold = 10
         self.lower_count_threshold = 5
-        self.api_update_interval = 3600 # 1 hour
+        self.api_update_interval = 3600  # 1 hour
+        self.upper_size_threshold = .15
+        self.lower_size_threshold = .1
 
         # stats
-        self.total_classification_counts = {
-            "Containers": 0,
-            "Paper": 0,
-            "Other": 0,
-        }
+        self.total_classification_counts = self.api.get_count()
 
     @classmethod
     def parse_args(cls) -> argparse.Namespace:
@@ -150,7 +148,7 @@ class Detection:
         return pipeline
 
     @classmethod
-    def frameNorm(cls, frame: np.array, bbox: np.array) -> np.array:
+    def frame_norm(cls, frame: np.array, bbox: np.array) -> np.array:
         """
         Utility function to calculate bounding box in pixels
 
@@ -163,7 +161,7 @@ class Detection:
         return (np.clip(np.array(bbox), 0, 1) * normVals).astype(int)
 
     @classmethod
-    def displayFrame(cls, name: str, frame: np.array, detections: list, labels: dict) -> None:
+    def display_frame(cls, name: str, frame: np.array, detections: list, labels: dict, counts: dict = None) -> None:
         """
         Draw frame with possible bounding boxes
 
@@ -180,7 +178,7 @@ class Detection:
         for detection in detections:
             label = labels[detection.label]
             frame_color = colors.get(label, colors["Other"])
-            bbox = Detection.frameNorm(frame, (detection.xmin, detection.ymin,
+            bbox = Detection.frame_norm(frame, (detection.xmin, detection.ymin,
                                                detection.xmax, detection.ymax))
 
             # label name
@@ -192,6 +190,14 @@ class Detection:
             # bounding box
             cv2.rectangle(frame, (bbox[0], bbox[1]),
                           (bbox[2], bbox[3]), frame_color, 2)
+        frame = cv2.copyMakeBorder(
+            frame, (1080 - frame.shape[0])//2, (1080 - frame.shape[0])//2, (1920 - frame.shape[1])//2, (1920 - frame.shape[1])//2, cv2.BORDER_CONSTANT, value=(0, 0, 0))
+        if counts:
+            frame = cv2.putText(frame, f"Total count so far: {counts}", (
+                20, frame.shape[0] - 20), cv2.FONT_HERSHEY_TRIPLEX, 1, (255, 255, 255))
+
+        cv2.namedWindow(name, cv2.WINDOW_NORMAL)
+        cv2.setWindowProperty(name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         cv2.imshow(name, frame)
 
     def send_to_serial(self, detection) -> None:
@@ -241,11 +247,7 @@ class Detection:
             'container': self.total_classification_counts['Containers'],
             'other': self.total_classification_counts['Other'],
         })
-        self.total_classification_counts = {
-            'Paper': 0,
-            'Containers': 0,
-            'Other': 0,
-        }
+        self.total_classification_counts = self.api.get_count()
         print(f'Updated API counts to {self.api.get_count()}')
 
     def run(self) -> None:
@@ -273,6 +275,7 @@ class Detection:
                     frame = inRgb.getCvFrame()
                     cv2.putText(frame, "NN fps: {:.2f}".format(fps_counter / (time.monotonic() - startTime)),
                                 (2, frame.shape[0] - 4), cv2.FONT_HERSHEY_TRIPLEX, 0.4, color2)
+
                 if inDet is not None:
                     detections = inDet.detections
                     self.update_recent_detections(detections)
@@ -284,9 +287,17 @@ class Detection:
 
                         # use two thresholds, idea from hysteresis thresholding
                         count_threshold = self.upper_count_threshold
+                        size_threshold = self.upper_size_threshold
 
                         if label == self.last_classification:
                             count_threshold = self.lower_count_threshold
+                            size_threshold = self.lower_size_threshold
+
+                        width = detection.xmax - detection.xmin
+                        height = detection.ymax - detection.ymin
+                        if width < size_threshold or height < size_threshold:
+                            detections.remove(detection)
+                            continue
 
                         # do not display uncertain detections
                         if count < count_threshold or count < max_count:
@@ -304,8 +315,8 @@ class Detection:
                     fps_counter += 1
 
                 if frame is not None:
-                    Detection.displayFrame("rgb", frame, detections,
-                                           labels)
+                    Detection.display_frame("rgb", frame, detections,
+                                           labels, self.total_classification_counts)
 
                 if cv2.waitKey(1) == ord("q"):
                     break
