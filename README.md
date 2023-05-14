@@ -14,7 +14,7 @@ For Dragonhack 2023, we built a smart trash can that utilises embedded computer 
 
 When the user approaches with a piece of trash, the DepthAI camera on the trash can detects the item and determines which recycling category it belongs into (packaging, paper, and "other", similar to most public trash cans in Slovenia). The entire detection and classification process runs on the embedded device itself and doesn't rely on a host computer. The LED lights on the trashcan, powered by an embedded software ran on ESP32 (Arduino), light up around the relevant recycling box. That way, the user can easily understand how to dispose of their item correctly.
 
-![Working example](src/img/demo.gif)
+![Working example](img/demo.gif)
 
 To further inform our users, we built a counter of items discarded into each one of the recycling boxes, using a serverless architecture (Azure Functions) and MongoDB.
 
