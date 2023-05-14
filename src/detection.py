@@ -192,7 +192,10 @@ class Detection:
             frame, (1080 - frame.shape[0])//2, (1080 - frame.shape[0])//2, (1920 - frame.shape[1])//2, (1920 - frame.shape[1])//2, cv2.BORDER_CONSTANT, value=(0, 0, 0))
         if counts:
             frame = cv2.putText(frame, f"Total count so far: {counts}", (
-                20, frame.shape[0] - 100), cv2.FONT_HERSHEY_TRIPLEX, 0.8, (255, 255, 255))
+                20, frame.shape[0] - 20), cv2.FONT_HERSHEY_TRIPLEX, 1, (255, 255, 255))
+
+        cv2.namedWindow(name, cv2.WINDOW_NORMAL)
+        cv2.setWindowProperty(name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         cv2.imshow(name, frame)
 
     def send_to_serial(self, detection) -> None:
