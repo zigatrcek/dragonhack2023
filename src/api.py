@@ -10,7 +10,7 @@ class API:
     """Class that enables communication with an Azure Function API.
     """
 
-    def __init__(self, url:str):
+    def __init__(self, url: str):
         self.url = url
 
     def get_count(self) -> dict[int]:
@@ -22,12 +22,12 @@ class API:
         response = requests.get(self.url)
         latest = response.json()[-1]
         return {
-            'paper': latest['paper'],
-            'container': latest['container'],
-            'other': latest['other'],
+            'Containers': latest['container'],
+            'Paper': latest['paper'],
+            'Other': latest['other'],
         }
 
-    def post_count(self, counts:dict[int]) -> dict:
+    def post_count(self, counts: dict[int]) -> dict:
         """Posts incremental sum of total class counts to the API.
 
         Args:
@@ -36,12 +36,6 @@ class API:
         Returns:
             dict: Latest database entry.
         """
-        prev_count = self.get_count()
-
-        counts['paper'] += prev_count['paper']
-        counts['container'] += prev_count['container']
-        counts['other'] += prev_count['other']
-
         response = requests.post(self.url, json=counts)
         return response.json()
 
