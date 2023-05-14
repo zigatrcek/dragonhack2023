@@ -36,7 +36,8 @@ class Detection:
 
         # settings
         self.max_frame_age = 1.0
-        self.min_classification_count = 10
+        self.upper_count_threshold = 10
+        self.lower_count_threshold = 5
         self.api_update_interval = 3600 # 1 hour
 
         # stats
@@ -281,8 +282,14 @@ class Detection:
                         label = labels[detection.label]
                         count = self.classification_counts[label]
 
+                        # use two thresholds, idea from hysteresis thresholding
+                        count_threshold = self.upper_count_threshold
+
+                        if label == self.last_classification:
+                            count_threshold = self.lower_count_threshold
+
                         # do not display uncertain detections
-                        if count < self.min_classification_count or count < max_count:
+                        if count < count_threshold or count < max_count:
                             detections.remove(detection)
 
                         # if detected class changes, send to serial
@@ -291,7 +298,7 @@ class Detection:
                             self.total_classification_counts[label] += 1
                             self.send_to_serial(detection)
 
-                    if self.last_classification and max_count < self.min_classification_count:
+                    if self.last_classification and max_count < self.upper_count_threshold:
                         self.last_classification = None
                         self.send_to_serial(None)
                     fps_counter += 1
