@@ -33,6 +33,7 @@ class Detection:
         }
         self.last_classification = None
         self.last_api_update = 0
+        self.last_count_update = 0
 
         # settings
         self.max_frame_age = 1.0
@@ -41,6 +42,7 @@ class Detection:
         self.api_update_interval = 3600  # 1 hour
         self.upper_size_threshold = .15
         self.lower_size_threshold = .1
+        self.count_update_interval = 3
 
         # stats
         self.total_classification_counts = self.api.get_count()
@@ -173,7 +175,7 @@ class Detection:
         colors = {
             "Containers": (0, 255, 255),  # yellow
             "Paper": (255, 0, 0),  # blue
-            "Other": (0, 0, 255),  # red
+            "Other": (255, 255, 255),  # white
         }
         for detection in detections:
             label = labels[detection.label]
@@ -183,7 +185,7 @@ class Detection:
 
             # label name
             cv2.putText(frame, label, (bbox[0] +
-                        10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.5, frame_color)
+                        10, bbox[1] + 20), cv2.FONT_HERSHEY_TRIPLEX, 0.7, frame_color)
             # confidence
             cv2.putText(frame, f"{int(detection.confidence * 100)}%",
                         (bbox[0] + 10, bbox[1] + 40), cv2.FONT_HERSHEY_TRIPLEX, 0.5, frame_color)
@@ -195,6 +197,10 @@ class Detection:
         if counts:
             frame = cv2.putText(frame, f"Total count so far: {counts}", (
                 20, frame.shape[0] - 20), cv2.FONT_HERSHEY_TRIPLEX, 1, (255, 255, 255))
+        if detections:
+            detection = detections[0]
+            label = labels[detection.label]
+            cv2.putText(frame, f"Current item: {label}", (50, 50), cv2.FONT_HERSHEY_TRIPLEX, 1.2, (255, 255, 255))
 
         cv2.namedWindow(name, cv2.WINDOW_NORMAL)
         cv2.setWindowProperty(name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
@@ -306,7 +312,10 @@ class Detection:
                         # if detected class changes, send to serial
                         elif label != self.last_classification:
                             self.last_classification = label
-                            self.total_classification_counts[label] += 1
+                            if time.monotonic() - self.last_count_update > self.count_update_interval:
+                                self.last_count_update = time.monotonic()
+                                self.total_classification_counts[label] += 1
+
                             self.send_to_serial(detection)
 
                     if self.last_classification and max_count < self.upper_count_threshold:
@@ -319,4 +328,5 @@ class Detection:
                                            labels, self.total_classification_counts)
 
                 if cv2.waitKey(1) == ord("q"):
+                    self.update_api_counts()
                     break

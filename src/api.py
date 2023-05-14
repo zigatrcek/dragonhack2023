@@ -45,4 +45,4 @@ if __name__ == "__main__":
     """
     api = API(API_URL)
     print(api.get_count())
-    print(api.post_count({'paper': 0, 'container': 0, 'other': 0}))
+    # print(api.post_count({'paper': 0, 'container': 0, 'other': 0}))
