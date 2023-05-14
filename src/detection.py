@@ -8,6 +8,7 @@ import cv2
 import depthai as dai
 import numpy as np
 from serial_communication import SerialCommunication
+from api import API_URL, API
 
 
 class Detection:
@@ -20,6 +21,7 @@ class Detection:
         # devices
         self.device = device or dai.Device(self.pipeline)
         self.serial_communication = serial_communication or SerialCommunication()
+        self.api = API(API_URL)
 
         # live computation
         self.recent_frames = deque()
@@ -30,10 +32,19 @@ class Detection:
             "Other": 0,
         }
         self.last_classification = None
+        self.last_api_update = 0
 
         # settings
         self.max_frame_age = 1.0
         self.min_classification_count = 10
+        self.api_update_interval = 3600 # 1 hour
+
+        # stats
+        self.total_classification_counts = {
+            "Containers": 0,
+            "Paper": 0,
+            "Other": 0,
+        }
 
     @classmethod
     def parse_args(cls) -> argparse.Namespace:
@@ -222,6 +233,20 @@ class Detection:
             removed_frame = self.recent_frames.popleft()
             self.classification_counts[labels[removed_frame.label]] -= 1
 
+    def update_api_counts(self) -> None:
+        self.last_api_update = time.monotonic()
+        self.api.post_count({
+            'paper': self.total_classification_counts['Paper'],
+            'container': self.total_classification_counts['Containers'],
+            'other': self.total_classification_counts['Other'],
+        })
+        self.total_classification_counts = {
+            'Paper': 0,
+            'Containers': 0,
+            'Other': 0,
+        }
+        print(f'Updated API counts to {self.api.get_count()}')
+
     def run(self) -> None:
         # Connect to device and start pipeline
         with self.device as device:
@@ -237,6 +262,9 @@ class Detection:
             labels = self.config.get("labels", {})
 
             while True:
+                if time.monotonic() - self.last_api_update > self.api_update_interval:
+                    self.update_api_counts()
+
                 inRgb = qRgb.get()
                 inDet = qDet.get()
 
@@ -260,6 +288,7 @@ class Detection:
                         # if detected class changes, send to serial
                         elif label != self.last_classification:
                             self.last_classification = label
+                            self.total_classification_counts[label] += 1
                             self.send_to_serial(detection)
 
                     if self.last_classification and max_count < self.min_classification_count:
@@ -273,10 +302,3 @@ class Detection:
 
                 if cv2.waitKey(1) == ord("q"):
                     break
-
-
-if __name__ == "__main__":
-    args = Detection.parse_args()
-    det = Detection(
-        args, serial_communication=SerialCommunication(port='COM9'))
-    det.run()
